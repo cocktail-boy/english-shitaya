@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shitaya Voice Trainer — Standalone</title>
+  <style>
+    :root {
+      --bg: #f7f7f7; --card:#ffffff; --text:#1f1f1f; --muted:#666; --accent:#111;
+      --border:#e5e5e5; --subtle:#fafafa; --brand:#111; --highlight:#fef3c7; --highlight-b:#fde68a;
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", Arial, sans-serif; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 26px; margin: 0 0 6px; }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .grid { display:grid; grid-template-columns: 1fr; gap:16px; }
+    @media (min-width: 900px){ .grid{ grid-template-columns: 1fr 1fr 1fr; }}
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .btn { border-radius:12px; padding:10px 12px; border:1px solid var(--border); background:var(--subtle); cursor:pointer; }
+    .btn.primary{ background:var(--brand); color:#fff; border-color:#000; }
+    .btn.alt{ background:#eaeaea; }
+    .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+    .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .label{ font-size:12px; color:var(--muted); margin-top:8px; }
+    select, input[type="range"], input[type="checkbox"]{ accent-color:#111; }
+    .pill{ padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:#f2f2f2; cursor:pointer; }
+    .pill.active{ background:#111; color:#fff; border-color:#000; }
+    .current { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; margin:18px 0; }
+    .titleRow { color:var(--muted); font-size:13px; }
+    .en { font-size:20px; margin-top:8px; }
+    .jp { font-size:16px; color:#444; margin-top:2px; }
+    .feedback{ background:var(--highlight); border:1px solid var(--highlight-b); padding:10px 12px; border-radius:12px; margin-top:10px; font-size:14px; }
+    .list { display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media (min-width: 900px){ .list{ grid-template-columns: 1fr 1fr; }}
+    .lineBtn{ text-align:left; padding:12px; border-radius:14px; border:1px solid var(--border); background:#fff; }
+    .lineBtn.active{ border-color:#111; background:#fafafa; }
+    .muted { color:var(--muted); font-size:12px; }
+    .progress { color:var(--muted); font-size:12px; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Shitaya Voice Trainer</h1>
+    <div class="sub">Listen, shadow, and repeat key bilingual lines for salon reception & treatment flow.</div>
+
+    <div class="grid">
+      <!-- Playback -->
+      <div class="card">
+        <div class="label" style="font-weight:600">Playback</div>
+        <div class="row">
+          <button class="btn primary" id="btn-listen">Listen</button>
+          <button class="btn" id="btn-listen-slow">Listen (Slow)</button>
+          <button class="btn" id="btn-repeat">Repeat Mode</button>
+        </div>
+        <div class="label">Mode:
+          <select id="mode">
+            <option value="en">English only</option>
+            <option value="jp">Japanese only</option>
+            <option value="both">English → Japanese</option>
+          </select>
+        </div>
+        <div class="label">Rate: <span id="rate-v">1.0</span>
+          <input id="rate" type="range" min="0.7" max="1.3" step="0.05" value="1.0" />
+          <div>Slow rate: <span id="srate-v">0.8</span>
+            <input id="srate" type="range" min="0.5" max="1.0" step="0.05" value="0.8" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Voices -->
+      <div class="card">
+        <div class="label" style="font-weight:600">Voices</div>
+        <div class="label">English Voice</div>
+        <select id="en-voice"></select>
+        <div class="label">Japanese Voice</div>
+        <select id="ja-voice"></select>
+        <div class="row" style="margin-top:8px">
+          <input type="checkbox" id="auto-advance" checked />
+          <label for="auto-advance" class="muted">Auto-advance on good pronunciation (≥60%)</label>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="card">
+        <div class="label" style="font-weight:600">Navigation</div>
+        <div class="label">Section</div>
+        <div id="section-pills" class="row" style="margin-bottom:10px; flex-wrap:wrap"></div>
+        <div class="row">
+          <button class="btn" id="btn-prev">◀ Prev</button>
+          <button class="btn primary" id="btn-next">Next ▶</button>
+        </div>
+        <div class="progress" id="progress"></div>
+      </div>
+    </div>
+
+    <!-- Current line -->
+    <div class="current">
+      <div class="titleRow" id="title-row"></div>
+      <div class="en" id="line-en"></div>
+      <div class="jp" id="line-jp"></div>
+      <div class="feedback" id="feedback" style="display:none"></div>
+    </div>
+
+    <!-- List -->
+    <div class="list" id="line-list"></div>
+    <div style="height:40px"></div>
+  </div>
+
+  <script>
+    // ====== Data ======
+    const sections = [
+      {
+        titleJP: "【ご来店】",
+        titleEN: "Upon Arrival",
+        lines: [
+          { jp: "靴を脱いでスリッパに履き替えてください。", en: "Please take off your shoes and change into slippers." },
+          { jp: "ソファへおかけください。", en: "Have a seat on the sofa, please." },
+          { jp: "何か飲み物は飲みますか？", en: "Would you like something to drink?" },
+          { jp: "・お水", en: "Water" },
+          { jp: "・ルイボスティー（ホット or アイス）", en: "Rooibos tea (Hot or Iced)" },
+          { jp: "・コーヒー（ホット or アイス）", en: "Coffee (Hot or Iced)" },
+        ],
+      },
+      {
+        titleJP: "【メニュー説明】",
+        titleEN: "Menu Explanation",
+        lines: [
+          { jp: "マッサージは最短90分からです。", en: "Our massage sessions start from 90 minutes." },
+          { jp: "料金はこちらです。", en: "Here are the prices." },
+          { jp: "マッサージの時間に、支度（シャワー・お風呂・お着替え）として30分が追加されています。", en: "The total time includes an extra 30 minutes for preparation (shower, bath, or changing)." },
+          { jp: "マッサージをせずお部屋利用のみの料金はこちらです。", en: "If you’d like to use the room without a massage, here is the room-use fee." },
+          { jp: "マッサージの種類：ドライ（指圧）、クリーム（オイルのような施術）、ストレッチ。", en: "Massage types: Dry (Shiatsu-style), Cream (similar to oil massage), and Stretching." },
+          { jp: "オプション：リフレクソロジー、ドライヘッドスパ、クリームヘッドスパ（施術後に髪を洗います）。", en: "Optional add-ons: Reflexology, Dry head spa, Cream head spa (requires hair washing afterward)." },
+          { jp: "今日はどの種類のマッサージにしますか？", en: "Which type of massage would you like today?" },
+          { jp: "※組み合わせることもできます。", en: "You can also combine different styles if you like." },
+          { jp: "今日はどこが疲れていますか？", en: "Where do you feel most tired or tense today?" },
+        ],
+      },
+      {
+        titleJP: "【お部屋の案内】",
+        titleEN: "Room Guidance",
+        lines: [
+          { jp: "サウナルームをご案内します。", en: "Let me show you to the sauna room." },
+          { jp: "これがサウナです。", en: "This is the sauna." },
+          { jp: "右側に温かいお風呂、左側に水風呂があります。", en: "There’s a hot bath on the right and a cold bath on the left." },
+          { jp: "トイレはこちらです。", en: "The toilet is here." },
+        ],
+      },
+      {
+        titleJP: "【着替え】",
+        titleEN: "Changing",
+        lines: [
+          { jp: "これに着替えてください。", en: "Please change into these clothes." },
+          { jp: "着替えが終わったらiPadからメッセージを送ってください。", en: "When you’re ready, send me a message from the iPad." },
+          { jp: "今の時間（〇〇:〇〇）から支度の時間をスタートします。", en: "We’ll start your preparation time from (XX:XX)." },
+          { jp: "説明は以上ですが、何か質問はありますか？", en: "That’s all for the explanation — do you have any questions?" },
+        ],
+      },
+      {
+        titleJP: "【施術中】",
+        titleEN: "During Treatment",
+        lines: [
+          { jp: "フットバスをするのでソファにおかけください。", en: "We’ll start with a foot bath. Please sit on the sofa." },
+          { jp: "施術用にベッドを作るので少しお待ちください。", en: "I’ll prepare the bed for your massage — please wait a moment." },
+          { jp: "うつ伏せに寝てください。", en: "Please lie face down." },
+          { jp: "枕は寝心地どうですか？", en: "Is the pillow comfortable?" },
+          { jp: "顔を埋める枕もありますが変えますか？", en: "We also have a face-cradle pillow — would you like to switch?" },
+          { jp: "強さはいかがですか？", en: "How is the pressure?" },
+          { jp: "強くする／弱くする", en: "Stronger / Softer" },
+          { jp: "加減したい時は言ってください。", en: "Please let me know anytime if you want me to adjust the pressure." },
+          { jp: "仰向けになります。", en: "Now please turn over onto your back." },
+          { jp: "お腹の下のクッションを抜きますね。", en: "I’ll remove the cushion under your stomach." },
+          { jp: "トイレは行きますか？", en: "Would you like to use the toilet?" },
+          { jp: "お水は飲みますか？", en: "Would you like some water?" },
+        ],
+      },
+      {
+        titleJP: "【施術後】",
+        titleEN: "After Treatment",
+        lines: [
+          { jp: "以上で施術は終わりです。ありがとうございました。", en: "That’s the end of the massage. Thank you very much." },
+          { jp: "お部屋利用の時間は残り〇分です。", en: "You have about XX minutes left for room use." },
+          { jp: "〇分後にお会計を持ってきます。", en: "I’ll bring the bill in XX minutes." },
+          { jp: "（30分以上ゆっくりする場合は、着替え終わったらまたメッセージを送ってください。）", en: "If you’d like to relax longer than 30 minutes, please send me a message after you finish changing." },
+        ],
+      },
+    ];
+
+    // ====== State ======
+    let sectionIdx = 0;
+    let lineIdx = 0;
+    let mode = 'en';
+    let rate = 1.0;
+    let slowRate = 0.8;
+    let autoAdvance = true;
+    let recognizing = false;
+
+    // ====== Elements ======
+    const btnListen = document.getElementById('btn-listen');
+    const btnListenSlow = document.getElementById('btn-listen-slow');
+    const btnRepeat = document.getElementById('btn-repeat');
+    const selMode = document.getElementById('mode');
+    const rateInput = document.getElementById('rate');
+    const srateInput = document.getElementById('srate');
+    const rateV = document.getElementById('rate-v');
+    const srateV = document.getElementById('srate-v');
+    const enVoiceSel = document.getElementById('en-voice');
+    const jaVoiceSel = document.getElementById('ja-voice');
+    const autoAdvChk = document.getElementById('auto-advance');
+    const pills = document.getElementById('section-pills');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const progress = document.getElementById('progress');
+    const titleRow = document.getElementById('title-row');
+    const lineEN = document.getElementById('line-en');
+    const lineJP = document.getElementById('line-jp');
+    const feedback = document.getElementById('feedback');
+    const list = document.getElementById('line-list');
+
+    // ====== Voices ======
+    let voices = [];
+    let enVoices = [], jaVoices = [];
+    let enVoice = null, jaVoice = null;
+
+    function loadVoices(){
+      voices = window.speechSynthesis.getVoices();
+      enVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+      jaVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+      enVoiceSel.innerHTML = enVoices.map(v=>`<option>${v.name}</option>`).join('');
+      jaVoiceSel.innerHTML = jaVoices.map(v=>`<option>${v.name}</option>`).join('');
+      enVoice = enVoices[0] || null;
+      jaVoice = jaVoices[0] || null;
+    }
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    enVoiceSel.addEventListener('change', e=>{ const name=e.target.value; enVoice = enVoices.find(v=>v.name===name)||null; });
+    jaVoiceSel.addEventListener('change', e=>{ const name=e.target.value; jaVoice = jaVoices.find(v=>v.name===name)||null; });
+
+    // ====== UI Build ======
+    function buildPills(){
+      pills.innerHTML = '';
+      sections.forEach((s,i)=>{
+        const b = document.createElement('button');
+        b.className = 'pill' + (i===sectionIdx?' active':'');
+        b.textContent = s.titleEN;
+        b.onclick = ()=>{ sectionIdx=i; lineIdx=0; feedback.style.display='none'; render(); buildList(); buildPills(); };
+        pills.appendChild(b);
+      });
+    }
+
+    function buildList(){
+      list.innerHTML = '';
+      const curSec = sections[sectionIdx];
+      curSec.lines.forEach((l, idx)=>{
+        const b = document.createElement('button');
+        b.className = 'lineBtn' + (idx===lineIdx?' active':'');
+        b.innerHTML = `<div class="muted">Line ${idx+1}</div><div class="en">${l.en}</div><div class="jp">${l.jp}</div>`;
+        b.onclick = ()=>{ lineIdx = idx; feedback.style.display='none'; render(); buildList(); };
+        list.appendChild(b);
+      });
+    }
+
+    function render(){
+      const sec = sections[sectionIdx];
+      const line = sec.lines[lineIdx];
+      titleRow.textContent = `${sec.titleJP} / ${sec.titleEN}`;
+      lineEN.textContent = line.en;
+      lineJP.textContent = line.jp;
+      progress.textContent = `Progress: Section ${sectionIdx+1}/${sections.length} • Line ${lineIdx+1}/${sec.lines.length}`;
+    }
+
+    // ====== Helpers ======
+    function normalize(s){ return s.toLowerCase().replace(/[^a-z'\s]/g,'').replace(/\s+/g,' ').trim(); }
+    function similarity(a,b){
+      const A = new Set(normalize(a).split(' '));
+      const B = new Set(normalize(b).split(' '));
+      if (!A.size && !B.size) return 1;
+      let inter=0; A.forEach(w=>{ if(B.has(w)) inter++; });
+      return inter / new Set([...A, ...B]).size;
+    }
+
+    function say(text, voice, r){
+      return new Promise(resolve=>{
+        const u = new SpeechSynthesisUtterance(text);
+        if (voice) u.voice = voice;
+        u.rate = r;
+        u.onend = ()=>resolve();
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      });
+    }
+
+    function getRecognition(){
+      const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+      if (!SR) return null;
+      const rec = new SR();
+      rec.lang = 'en-US';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      return rec;
+    }
+
+    async function speakCurrent(slow){
+      feedback.style.display='none';
+      const r = slow ? slowRate : rate;
+      const line = sections[sectionIdx].lines[lineIdx];
+      if (mode==='both'){
+        await say(line.en, enVoice, r);
+        await say(line.jp, jaVoice, r);
+      } else if (mode==='jp'){
+        await say(line.jp, jaVoice, r);
+      } else {
+        await say(line.en, enVoice, r);
+      }
+    }
+
+    function next(){
+      const sec = sections[sectionIdx];
+      if (lineIdx + 1 < sec.lines.length) lineIdx++;
+      else if (sectionIdx + 1 < sections.length){ sectionIdx++; lineIdx=0; }
+      feedback.style.display='none';
+      render(); buildList(); buildPills();
+    }
+
+    function prev(){
+      if (lineIdx>0) lineIdx--; else if (sectionIdx>0){ sectionIdx--; lineIdx = sections[sectionIdx].lines.length-1; }
+      feedback.style.display='none';
+      render(); buildList(); buildPills();
+    }
+
+    async function repeatMode(){
+      const rec = getRecognition();
+      await speakCurrent(false);
+      if (!rec){
+        feedback.style.display='block';
+        feedback.textContent = 'Speech recognition not supported in this browser. Try Chrome.';
+        return;
+      }
+      recognizing = true;
+      feedback.style.display='block';
+      feedback.textContent = 'Listening...';
+      rec.onresult = (ev)=>{
+        const said = (ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || '';
+        const target = sections[sectionIdx].lines[lineIdx].en;
+        const score = Math.round(similarity(target, said) * 100);
+        feedback.textContent = `You said: "${said}" — Similarity: ${score}%`;
+        recognizing = false;
+        if (autoAdvance && score >= 60) next();
+      };
+      rec.onerror = (e)=>{ feedback.textContent = `Recognition error: ${e.error||'unknown'}`; recognizing=false; };
+      rec.onend = ()=>{ recognizing=false; };
+      try { rec.start(); } catch(err) { /* ignore */ }
+    }
+
+    // ====== Bindings ======
+    btnListen.onclick = ()=>speakCurrent(false);
+    btnListenSlow.onclick = ()=>speakCurrent(true);
+    btnRepeat.onclick = ()=>repeatMode();
+    selMode.onchange = (e)=>{ mode = e.target.value; };
+    rateInput.oninput = (e)=>{ rate = parseFloat(e.target.value); rateV.textContent = rate.toFixed(1); };
+    srateInput.oninput = (e)=>{ slowRate = parseFloat(e.target.value); srateV.textContent = slowRate.toFixed(1); };
+    autoAdvChk.onchange = (e)=>{ autoAdvance = e.target.checked; };
+    btnPrev.onclick = prev; btnNext.onclick = next;
+
+    // Initial render
+    buildPills();
+    buildList();
+    render();
+  </script>
+</body>
+</html>
