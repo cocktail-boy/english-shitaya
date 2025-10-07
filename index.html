@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shitaya Voice Trainer — Minimal Mobile</title>
+  <title>Shitaya Voice Trainer — Minimal Mobile (with Spoken Praise)</title>
   <style>
-    :root { --bg:#fafafa; --card:#fff; --text:#1f1f1f; --muted:#666; --accent:#111; --border:#e6e6e6; --hi:#fff8e1; --hi-b:#ffe08a; }
+    :root { --bg:#fafafa; --card:#fff; --text:#1f1f1f; --muted:#666; --accent:#111; --border:#e6e6e6; --hi:#fff8e1; --hi-b:#ffe08a; --good:#e6ffed; --good-b:#2ecc71; }
     html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;}
     .container{max-width:900px;margin:0 auto;padding:16px;}
     h1{font-size:22px;margin:0 0 4px}
@@ -17,15 +17,17 @@
     .btn{border-radius:10px;padding:8px 10px;border:1px solid var(--border);background:#f2f2f2;cursor:pointer;font-size:14px}
     .btn.primary{background:#111;color:#fff;border-color:#000}
     .select{border:1px solid var(--border);border-radius:10px;padding:6px 8px;font-size:14px;background:#fff}
+    .voice-label{font-size:12px;color:var(--muted);margin-right:4px;}
 
-    /* Current line card front and center */
+    /* Current line card */
     .current{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin:12px 0}
     .titleRow{color:var(--muted);font-size:12px}
     .en{font-size:20px;margin-top:6px;line-height:1.35}
     .jp{font-size:16px;color:#444;margin-top:2px}
     .feedback{background:var(--hi);border:1px solid var(--hi-b);padding:8px 10px;border-radius:10px;margin-top:10px;font-size:14px}
+    .feedback.good{background:var(--good);border-color:var(--good-b);color:#14532d;}
 
-    /* Section chips: horizontally scrollable for mobile */
+    /* Section chips */
     .chips{display:flex;gap:8px;overflow-x:auto;padding:6px 2px;margin:8px 0}
     .chip{flex:0 0 auto;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:#f2f2f2;font-size:13px}
     .chip.active{background:#111;color:#fff;border-color:#000}
@@ -42,7 +44,7 @@
 <body>
   <div class="container">
     <h1>Shitaya Voice Trainer</h1>
-    <div class="sub">Minimal mobile UI — English playback only, slow=0.7, auto-advance on good pronunciation.</div>
+    <div class="sub">Minimal mobile UI — English playback only, slow=0.7, auto-advance on good pronunciation, with spoken praise.</div>
 
     <!-- Compact toolbar -->
     <div class="toolbar">
@@ -52,6 +54,7 @@
         <button class="btn" id="btn-repeat">Repeat</button>
         <button class="btn" id="btn-prev">◀ Prev</button>
         <button class="btn" id="btn-next">Next ▶</button>
+        <span class="voice-label">Voice</span>
         <select id="en-voice" class="select"></select>
       </div>
     </div>
@@ -131,8 +134,9 @@
 
     // ====== State ======
     let sectionIdx = 0, lineIdx = 0;
-    const rate = 1.0, slowRate = 0.7; // fixed
-    const autoAdvance = true; // always on
+    const rate = 1.0, slowRate = 0.7, autoAdvance = true;
+    const praiseThreshold = 80; // speak praise at >= 80%
+    const advanceThreshold = 60; // auto-advance at >= 60%
 
     // ====== Elements ======
     const btnListen = document.getElementById('btn-listen');
@@ -210,6 +214,7 @@
         if (voice) u.voice = voice;
         u.rate = r;
         u.onend = ()=>resolve();
+        // clear queue for mobile reliability
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(u);
       });
@@ -225,7 +230,7 @@
       return rec;
     }
 
-    function hideFeedback(){ feedback.style.display='none'; feedback.textContent=''; }
+    function hideFeedback(){ feedback.style.display='none'; feedback.textContent=''; feedback.className='feedback'; }
 
     async function speakCurrent(slow){
       hideFeedback();
@@ -258,12 +263,20 @@
       }
       feedback.style.display='block';
       feedback.textContent = 'Listening...';
-      rec.onresult = (ev)=>{
+      rec.onresult = async (ev)=>{
         const said = (ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || '';
         const target = sections[sectionIdx].lines[lineIdx].en;
         const score = Math.round(similarity(target, said) * 100);
-        feedback.textContent = `You said: "${said}" — Similarity: ${score}%`;
-        if (autoAdvance && score >= 60) next();
+        if (score >= praiseThreshold){
+          feedback.className = 'feedback good';
+          feedback.textContent = `✅ Great job! Similarity: ${score}%`;
+          // spoken praise
+          try { await say('Great job!', enVoice, 1.0); } catch(e) {}
+        } else {
+          feedback.className = 'feedback';
+          feedback.textContent = `You said: "${said}" — Similarity: ${score}%`;
+        }
+        if (autoAdvance && score >= advanceThreshold) next();
       };
       rec.onerror = (e)=>{ feedback.textContent = `Recognition error: ${e.error||'unknown'}`; };
       rec.onend = ()=>{};
