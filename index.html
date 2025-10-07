@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shitaya Voice Trainer — Minimal Mobile (with Spoken Praise)</title>
+  <title>Shitaya Voice Trainer – Minimal Mobile (with Spoken Praise)</title>
   <style>
     :root { --bg:#fafafa; --card:#fff; --text:#1f1f1f; --muted:#666; --accent:#111; --border:#e6e6e6; --hi:#fff8e1; --hi-b:#ffe08a; --good:#e6ffed; --good-b:#2ecc71; }
     html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;}
@@ -11,32 +11,34 @@
     h1{font-size:22px;margin:0 0 4px}
     .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
 
-    /* Compact toolbar */
-    .toolbar{position:sticky;top:0;z-index:10;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--border);} 
+    /* Compact toolbar - more subdued */
+    .toolbar{position:sticky;top:0;z-index:10;background:rgba(250,250,250,0.95);backdrop-filter:blur(8px);padding:8px 0;border-bottom:1px solid var(--border);opacity:0.9} 
     .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .btn{border-radius:10px;padding:8px 10px;border:1px solid var(--border);background:#f2f2f2;cursor:pointer;font-size:14px}
-    .btn.primary{background:#111;color:#fff;border-color:#000}
+    .btn{border-radius:10px;padding:8px 10px;border:1px solid var(--border);background:#f9f9f9;cursor:pointer;font-size:13px;color:#555}
+    .btn.primary{background:#333;color:#fff;border-color:#222}
     .select{border:1px solid var(--border);border-radius:10px;padding:6px 8px;font-size:14px;background:#fff}
     .voice-label{font-size:12px;color:var(--muted);margin-right:4px;}
 
-    /* Current line card */
-    .current{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin:12px 0}
-    .titleRow{color:var(--muted);font-size:12px}
-    .en{font-size:20px;margin-top:6px;line-height:1.35}
-    .jp{font-size:16px;color:#444;margin-top:2px}
+    /* Current line card - HIGHLIGHTED */
+    .current{background:#fff;border:3px solid #111;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+    .titleRow{color:var(--muted);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .en{font-size:24px;margin-top:10px;line-height:1.4;font-weight:600;color:#000}
+    .jp{font-size:17px;color:#555;margin-top:6px;line-height:1.5}
     .feedback{background:var(--hi);border:1px solid var(--hi-b);padding:8px 10px;border-radius:10px;margin-top:10px;font-size:14px}
     .feedback.good{background:var(--good);border-color:var(--good-b);color:#14532d;}
 
-    /* Section chips */
+    /* Section chips - more subdued */
     .chips{display:flex;gap:8px;overflow-x:auto;padding:6px 2px;margin:8px 0}
-    .chip{flex:0 0 auto;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:#f2f2f2;font-size:13px}
-    .chip.active{background:#111;color:#fff;border-color:#000}
+    .chip{flex:0 0 auto;padding:6px 10px;border-radius:999px;border:1px solid #e8e8e8;background:#f9f9f9;font-size:12px;color:#666;opacity:0.8;transition:all 0.2s}
+    .chip:hover{opacity:1}
+    .chip.active{background:#111;color:#fff;border-color:#000;opacity:1}
 
-    /* Line list */
+    /* Line list - more subdued */
     .list{display:grid;grid-template-columns:1fr;gap:10px}
     @media(min-width:760px){.list{grid-template-columns:1fr 1fr}}
-    .lineBtn{text-align:left;padding:10px;border-radius:12px;border:1px solid var(--border);background:#fff}
-    .lineBtn.active{border-color:#111;background:#fafafa}
+    .lineBtn{text-align:left;padding:10px;border-radius:12px;border:1px solid #e8e8e8;background:#fafafa;opacity:0.7;transition:all 0.2s}
+    .lineBtn:hover{opacity:1;border-color:#ccc}
+    .lineBtn.active{border-color:#111;background:#fafafa;opacity:1}
     .muted{color:var(--muted);font-size:12px}
     .progress{color:var(--muted);font-size:12px;margin-top:8px}
   </style>
@@ -44,7 +46,7 @@
 <body>
   <div class="container">
     <h1>Shitaya Voice Trainer</h1>
-    <div class="sub">Minimal mobile UI — English playback only, slow=0.7, auto-advance on good pronunciation, with spoken praise.</div>
+    <div class="sub">Minimal mobile UI – English playback only, slow=0.7, auto-advance on good pronunciation, with spoken praise.</div>
 
     <!-- Compact toolbar -->
     <div class="toolbar">
@@ -72,7 +74,10 @@
     </div>
 
     <!-- List -->
-    <div class="list" id="line-list"></div>
+    <div style="margin-top:24px;padding-top:16px;border-top:2px solid #e6e6e6">
+      <h3 style="font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:600">Other Lines</h3>
+      <div class="list" id="line-list"></div>
+    </div>
     <div style="height:28px"></div>
   </div>
 
@@ -89,9 +94,9 @@
       ]},
       { titleJP:"【メニュー説明】", titleEN:"Menu Explanation", lines:[
         { jp:"マッサージは最短90分からです。", en:"Our massage sessions start from 90 minutes." },
-        { jp:"料金はこちらです。", en:"Here’s our price list." },
+        { jp:"料金はこちらです。", en:"Here's our price list." },
         { jp:"マッサージの時間に、支度（シャワー・お風呂・お着替え）として30分が追加されています。", en:"The total time includes an extra 30 minutes for prep time (shower, bath, or changing)." },
-        { jp:"マッサージをせずお部屋利用のみの料金はこちらです。", en:"If you’d like to use the room without a massage, here’s the room rental fee." },
+        { jp:"マッサージをせずお部屋利用のみの料金はこちらです。", en:"If you'd like to use the room without a massage, here's the room rental fee." },
         { jp:"マッサージの種類：ドライ（指圧）、クリーム（オイルのような施術）、ストレッチ。", en:"Massage types: Dry (Shiatsu-style), Cream (similar to oil massage), and Stretching." },
         { jp:"オプション：リフレクソロジー、ドライヘッドスパ、クリームヘッドスパ（施術後に髪を洗います）。", en:"Optional add-ons: Reflexology, Dry head spa, and Cream head spa (requires washing your hair afterward)." },
         { jp:"今日はどの種類のマッサージにしますか？", en:"Which type of massage would you like today?" },
@@ -101,34 +106,34 @@
       { titleJP:"【お部屋の案内】", titleEN:"Room Guidance", lines:[
         { jp:"サウナルームをご案内します。", en:"Let me show you the sauna room." },
         { jp:"これがサウナです。", en:"This is the sauna." },
-        { jp:"右側に温かいお風呂、左側に水風呂があります。", en:"There’s a warm bath area on the right and a cold bath on the left." },
+        { jp:"右側に温かいお風呂、左側に水風呂があります。", en:"There's a warm bath area on the right and a cold bath on the left." },
         { jp:"トイレはこちらです。", en:"The restroom is right here." },
       ]},
       { titleJP:"【着替え】", titleEN:"Changing", lines:[
         { jp:"これに着替えてください。", en:"Please change into these clothes." },
-        { jp:"着替えが終わったらiPadからメッセージを送ってください。", en:"When you’re ready, please send me a message from the iPad." },
-        { jp:"今の時間（〇〇:〇〇）から支度の時間をスタートします。", en:"We’ll start your prep time from (XX:XX)." },
-        { jp:"説明は以上ですが、何か質問はありますか？", en:"That’s all for the explanation — do you have any questions?" },
+        { jp:"着替えが終わったらiPadからメッセージを送ってください。", en:"When you're ready, please send me a message from the iPad." },
+        { jp:"今の時間（〇〇:〇〇）から支度の時間をスタートします。", en:"We'll start your prep time from (XX:XX)." },
+        { jp:"説明は以上ですが、何か質問はありますか？", en:"That's all for the explanation – do you have any questions?" },
       ]},
       { titleJP:"【施術中】", titleEN:"During Treatment", lines:[
-        { jp:"フットバスをするのでソファにおかけください。", en:"We’ll start with a foot bath. Please have a seat on the couch." },
-        { jp:"施術用にベッドを作るので少しお待ちください。", en:"I’ll prepare the bed for your massage — please wait just a moment." },
+        { jp:"フットバスをするのでソファにおかけください。", en:"We'll start with a foot bath. Please have a seat on the couch." },
+        { jp:"施術用にベッドを作るので少しお待ちください。", en:"I'll prepare the bed for your massage – please wait just a moment." },
         { jp:"うつ伏せに寝てください。", en:"Please lie face down." },
         { jp:"枕は寝心地どうですか？", en:"Is the pillow comfortable?" },
-        { jp:"顔を埋める枕もありますが変えますか？", en:"We also have a face cradle — would you like to switch?" },
-        { jp:"強さはいかがですか？", en:"How’s the pressure?" },
+        { jp:"顔を埋める枕もありますが変えますか？", en:"We also have a face cradle – would you like to switch?" },
+        { jp:"強さはいかがですか？", en:"How's the pressure?" },
         { jp:"強くする／弱くする", en:"A little stronger / A little lighter" },
-        { jp:"加減したい時は言ってください。", en:"Please let me know anytime if you’d like me to adjust the pressure." },
+        { jp:"加減したい時は言ってください。", en:"Please let me know anytime if you'd like me to adjust the pressure." },
         { jp:"仰向けになります。", en:"Please turn over onto your back." },
-        { jp:"お腹の下のクッションを抜きますね。", en:"I’ll remove the cushion under your stomach." },
+        { jp:"お腹の下のクッションを抜きますね。", en:"I'll remove the cushion under your stomach." },
         { jp:"トイレは行きますか？", en:"Would you like to use the restroom?" },
         { jp:"お水は飲みますか？", en:"Would you like some water?" },
       ]},
       { titleJP:"【施術後】", titleEN:"After Treatment", lines:[
-        { jp:"以上で施術は終わりです。ありがとうございました。", en:"That’s the end of your session. Thank you very much." },
+        { jp:"以上で施術は終わりです。ありがとうございました。", en:"That's the end of your session. Thank you very much." },
         { jp:"お部屋利用の時間は残り〇分です。", en:"You have about XX minutes left for room use." },
-        { jp:"〇分後にお会計を持ってきます。", en:"I’ll bring the check in XX minutes." },
-        { jp:"（30分以上ゆっくりする場合は、着替え終わったらまたメッセージを送ってください。）", en:"If you’d like to relax for more than 30 minutes, please send me a message once you’ve finished changing." },
+        { jp:"〇分後にお会計を持ってきます。", en:"I'll bring the check in XX minutes." },
+        { jp:"（30分以上ゆっくりする場合は、着替え終わったらまたメッセージを送ってください。）", en:"If you'd like to relax for more than 30 minutes, please send me a message once you've finished changing." },
       ]},
     ];
 
@@ -274,7 +279,7 @@
           try { await say('Great job!', enVoice, 1.0); } catch(e) {}
         } else {
           feedback.className = 'feedback';
-          feedback.textContent = `You said: "${said}" — Similarity: ${score}%`;
+          feedback.textContent = `You said: "${said}" – Similarity: ${score}%`;
         }
         if (autoAdvance && score >= advanceThreshold) next();
       };
