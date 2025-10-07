@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shitaya Voice Trainer – Minimal Mobile (with Spoken Praise)</title>
+  <title>英語で接客マッサージ – English Practice for Spa Staff</title>
   <style>
     :root { 
       --bg:#fdf8f5; 
@@ -59,18 +59,18 @@
 </head>
 <body>
   <div class="container">
-    <h1>Shitaya Voice Trainer</h1>
-    <div class="sub">Minimal mobile UI – English playback only, slow=0.7, auto-advance on good pronunciation, with spoken praise.</div>
+    <h1>英語で接客マッサージ</h1>
+    <div class="sub">スパ・マッサージの接客英語を練習 – 聞いて、リピートして、すぐにフィードバック！</div>
 
     <!-- Compact toolbar -->
     <div class="toolbar">
       <div class="bar">
-        <button class="btn primary" id="btn-listen">Listen</button>
-        <button class="btn" id="btn-listen-slow">Slow</button>
-        <button class="btn" id="btn-repeat">Repeat</button>
-        <button class="btn" id="btn-prev">◀ Prev</button>
-        <button class="btn" id="btn-next">Next ▶</button>
-        <span class="voice-label">Voice</span>
+        <button class="btn primary" id="btn-listen">聞く</button>
+        <button class="btn" id="btn-listen-slow">ゆっくり</button>
+        <button class="btn" id="btn-repeat">リピート</button>
+        <button class="btn" id="btn-prev">◀ 前へ</button>
+        <button class="btn" id="btn-next">次へ ▶</button>
+        <span class="voice-label">音声</span>
         <select id="en-voice" class="select"></select>
       </div>
     </div>
@@ -89,7 +89,7 @@
 
     <!-- List -->
     <div style="margin-top:24px;padding-top:16px;border-top:2px solid var(--pink-light)">
-      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:600">Other Lines</h3>
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:600">他のフレーズ</h3>
       <div class="list" id="line-list"></div>
     </div>
     <div style="height:28px"></div>
@@ -190,7 +190,7 @@
       sections.forEach((s,i)=>{
         const b = document.createElement('button');
         b.className = 'chip' + (i===sectionIdx? ' active':'');
-        b.textContent = s.titleEN;
+        b.textContent = s.titleJP;
         b.onclick = ()=>{ sectionIdx=i; lineIdx=0; hideFeedback(); render(); buildList(); buildChips(); };
         chips.appendChild(b);
       });
@@ -202,7 +202,7 @@
       curSec.lines.forEach((l, idx)=>{
         const b = document.createElement('button');
         b.className = 'lineBtn' + (idx===lineIdx? ' active':'');
-        b.innerHTML = `<div class="muted">Line ${idx+1}</div><div class="en">${l.en}</div><div class="jp">${l.jp}</div>`;
+        b.innerHTML = `<div class="muted">${idx+1}番目</div><div class="en">${l.en}</div><div class="jp">${l.jp}</div>`;
         b.onclick = ()=>{ lineIdx=idx; hideFeedback(); render(); buildList(); };
         list.appendChild(b);
       });
@@ -214,7 +214,7 @@
       titleRow.textContent = `${sec.titleJP} / ${sec.titleEN}`;
       lineEN.textContent = line.en;
       lineJP.textContent = line.jp;
-      progressEl.textContent = `Progress: Section ${sectionIdx+1}/${sections.length} • Line ${lineIdx+1}/${sec.lines.length}`;
+      progressEl.textContent = `進捗: セクション ${sectionIdx+1}/${sections.length} • フレーズ ${lineIdx+1}/${sec.lines.length}`;
     }
 
     // ====== Helpers ======
@@ -277,27 +277,27 @@
       await speakCurrent(false);
       if (!rec){
         feedback.style.display='block';
-        feedback.textContent = 'Speech recognition not supported in this browser. Try Chrome.';
+        feedback.textContent = '音声認識に対応していません。Chromeをお試しください。';
         return;
       }
       feedback.style.display='block';
-      feedback.textContent = 'Listening...';
+      feedback.textContent = '聞いています...';
       rec.onresult = async (ev)=>{
         const said = (ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || '';
         const target = sections[sectionIdx].lines[lineIdx].en;
         const score = Math.round(similarity(target, said) * 100);
         if (score >= praiseThreshold){
           feedback.className = 'feedback good';
-          feedback.textContent = `✅ Great job! Similarity: ${score}%`;
+          feedback.textContent = `✅ 素晴らしい！ 類似度: ${score}%`;
           // spoken praise
           try { await say('Great job!', enVoice, 1.0); } catch(e) {}
         } else {
           feedback.className = 'feedback';
-          feedback.textContent = `You said: "${said}" – Similarity: ${score}%`;
+          feedback.textContent = `あなたの発音: "${said}" – 類似度: ${score}%`;
         }
         if (autoAdvance && score >= advanceThreshold) next();
       };
-      rec.onerror = (e)=>{ feedback.textContent = `Recognition error: ${e.error||'unknown'}`; };
+      rec.onerror = (e)=>{ feedback.textContent = `認識エラー: ${e.error||'不明'}`; };
       rec.onend = ()=>{};
       try { rec.start(); } catch(err) {}
     }
